@@ -41,7 +41,7 @@ pipeline {
             // Test stage using the same Node.js 18 Alpine image
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.58.2-jammy'
+                    image 'mcr.microsoft.com/playwright:v1.59.1-jammy'
                     reuseNode true
                 }
             }
