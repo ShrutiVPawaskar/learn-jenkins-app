@@ -1,9 +1,6 @@
 pipeline {
     agent any
-    environment {
-        NETLIFY_SITE_ID = 'b9cf0f39-7b7b-4c15-913a-8a2f4b4eda8c'
-        NETLIFY_AUTH_TOKEN = credentials('netlify-token')
-    }
+    
 
     stages {
         // Build stage using Node.js 18 Alpine image
@@ -43,6 +40,11 @@ pipeline {
                             npm test
                         '''
                     }
+                    post {
+                        always {
+                            junit 'jest-results/junit.xml' 
+                        }   
+                    }
                 }
                 stage('E2E') {
                     // Test stage using the same Node.js 18 Alpine image
@@ -60,6 +62,12 @@ pipeline {
                             sleep 10
                             npx playwright test --reporter=html
                         '''
+                    }
+                    post {
+                        always {
+                            junit 'jest-results/junit.xml' 
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright Local Report', reportTitles: '', useWrapperFileDirectly: true])
+                        }   
                     }
                 }
             }
@@ -82,11 +90,29 @@ pipeline {
             }   
         }
     }
-    post {
-        always {
-            junit 'jest-results/junit.xml' 
-            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-        }   
+    stage('Prod E2E') {
+        // Test stage using the same Node.js 18 Alpine image
+        agent {
+            docker {
+                image 'mcr.microsoft.com/playwright:v1.59.1-jammy'
+                reuseNode true
+            }
+        }
+        environment {
+            NETLIFY_SITE_ID = 'b9cf0f39-7b7b-4c15-913a-8a2f4b4eda8c'
+            NETLIFY_AUTH_TOKEN = credentials('netlify-token')
+            CI_ENVIRONMENT_URL = "https://tourmaline-naiad-809390.netlify.app"
+        }  
+        steps {
+            echo 'E2E Prod Stage'
+            sh'''
+                npx playwright test --reporter=html
+            '''
+        }
+        post {
+            always {
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright E2E Report', reportTitles: '', useWrapperFileDirectly: true])
+            }   
+        }
     }
-    
 }
