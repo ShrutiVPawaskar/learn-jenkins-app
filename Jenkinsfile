@@ -3,6 +3,7 @@ pipeline {
     environment {
         NETLIFY_SITE_ID = 'b9cf0f39-7b7b-4c15-913a-8a2f4b4eda8c'
         NETLIFY_AUTH_TOKEN = credentials('netlify-token')
+        REACT_APP_VERSION = '1.2.3'
     }
     stages {
         // Build stage using Node.js 18 Alpine image
@@ -101,13 +102,6 @@ pipeline {
                 always {
                     publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright E2E Staging Report', reportTitles: '', useWrapperFileDirectly: true])
                 }   
-            }
-        }
-        stage('Approval') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                     input message: 'Do you wish to deploy to production?', ok: 'Yes, I am sure.'
-                }
             }
         }
         stage('Deploy Production') {
