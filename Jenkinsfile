@@ -88,9 +88,34 @@ pipeline {
                     echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
                     node_modules/.bin/netlify status
                     node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-                    node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json
+                '''    
+                script{
+                    env.STAGING_URL = sh(script: "jq -r '.deploy.ssl_url' deploy-output.json", returnStdout: true).trim()
+                }  
+            } 
+        }
+        stage('Staging E2E') {
+            // Test stage using the same Node.js 18 Alpine image
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.59.1-jammy'
+                    reuseNode true
+                }
+            }
+            environment {
+                CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
+            }  
+            steps {
+                echo 'E2E Prod Stage'
+                sh'''
+                    npx playwright test --reporter=html
                 '''
-            }   
+            }
+            post {
+                always {
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright E2E Staging Report', reportTitles: '', useWrapperFileDirectly: true])
+                }   
+            }
         }
         stage('Approval') {
             steps {
