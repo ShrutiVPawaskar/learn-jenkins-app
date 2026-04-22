@@ -1,7 +1,9 @@
 pipeline {
     agent any
-    
-
+    environment {
+        NETLIFY_SITE_ID = 'b9cf0f39-7b7b-4c15-913a-8a2f4b4eda8c'
+        NETLIFY_AUTH_TOKEN = credentials('netlify-token')
+    }
     stages {
         // Build stage using Node.js 18 Alpine image
         stage('Build') {
@@ -98,8 +100,6 @@ pipeline {
                 }
             }
             environment {
-                NETLIFY_SITE_ID = 'b9cf0f39-7b7b-4c15-913a-8a2f4b4eda8c'
-                NETLIFY_AUTH_TOKEN = credentials('netlify-token')
                 CI_ENVIRONMENT_URL = "https://tourmaline-naiad-809390.netlify.app"
             }  
             steps {
