@@ -74,27 +74,7 @@ pipeline {
                 }
             }
         }
-        stage('Deploy Staging'){
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh '''
-                    npm install netlify-cli@20.1.1 node-jq
-                    node_modules/.bin/netlify --version
-                    echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
-                    node_modules/.bin/netlify status
-                    node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-                '''    
-                script{
-                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true).trim()
-                }  
-            } 
-        }
-        stage('Staging E2E') {
+        stage('Deploy Staging') {
             // Test stage using the same Node.js 18 Alpine image
             agent {
                 docker {
@@ -103,11 +83,17 @@ pipeline {
                 }
             }
             environment {
-                CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
+                CI_ENVIRONMENT_URL = 'STAGING_URL_PLACEHOLDER'
             }  
             steps {
-                echo 'E2E Prod Stage'
-                sh'''
+                sh '''
+                    npm install netlify-cli@20.1.1 node-jq
+                    node_modules/.bin/netlify --version
+                    echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
+                    node_modules/.bin/netlify status
+                    node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
+                    CI_ENVIRONMENT_URL = "$(node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json)"
+                    sleep 15
                     npx playwright test --reporter=html
                 '''
             }
@@ -124,7 +110,7 @@ pipeline {
                 }
             }
         }
-        stage('Prod Deploy and Test') {
+        stage('Deploy Production') {
             // Test stage using the same Node.js 18 Alpine image
             agent {
                 docker {
