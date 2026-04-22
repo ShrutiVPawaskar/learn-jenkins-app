@@ -124,24 +124,7 @@ pipeline {
                 }
             }
         }
-        stage('Deploy Production'){
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh '''
-                    npm install netlify-cli@20.1.1
-                    node_modules/.bin/netlify --version
-                    echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
-                    node_modules/.bin/netlify status
-                    node_modules/.bin/netlify deploy --prod --dir=build --message="Automated deployment from Jenkins"
-                '''
-            }   
-        }
-        stage('Prod E2E') {
+        stage('Prod Deploy and Test') {
             // Test stage using the same Node.js 18 Alpine image
             agent {
                 docker {
@@ -155,6 +138,12 @@ pipeline {
             steps {
                 echo 'E2E Prod Stage'
                 sh'''
+                    npm install netlify-cli@20.1.1
+                    node_modules/.bin/netlify --version
+                    echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
+                    node_modules/.bin/netlify status
+                    node_modules/.bin/netlify deploy --prod --dir=build --message="Automated deployment from Jenkins"
+                    sleep 15
                     npx playwright test --reporter=html
                 '''
             }
