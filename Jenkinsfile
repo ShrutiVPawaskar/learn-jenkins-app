@@ -6,6 +6,7 @@ pipeline {
         REACT_APP_VERSION = "1.0.${BUILD_ID}" // Example of using Jenkins build number as version
     }
     stages {
+
         // Build stage using Node.js 18 Alpine image
         stage('Build') {
             agent {
@@ -24,6 +25,28 @@ pipeline {
                     npm run build
                     ls -la
                 '''
+            }
+        }
+        stage('AWS') {
+            agent {
+                docker {
+                    image 'amazon/aws-cli'
+                    reuseNode true
+                    args "--entrypoint=''"
+                }
+            }
+            environment{
+                AWS_S3_BUCKET = 'shruti-website-bucket'
+            }
+            steps{
+                sh '''
+                    aws --version 
+                '''
+                withCredentials([usernamePassword(credentialsId: 'my_aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        aws s3 sync build s3://$AWS_S3_BUCKET 
+                    '''
+                }
             }
         }
         stage('Run Tests') {
