@@ -16,11 +16,15 @@ pipeline {
             }
             steps{
 
-                withCredentials([usernamePassword(credentialsId: 'my_aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                withCredentials([usernamePassword(credentialsId: 'my_aws', 
+                                passwordVariable: 'AWS_SECRET_ACCESS_KEY', 
+                                usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
                         aws --version 
-                        aws ecs register-task-definition --cli-input-json file://aws/task-defination-prod.json
-                        aws ecs update-service --service LearnJenkinsApp-Service-Prod --task-definition LearnJenkinsApp-TaskDefination-Prod:2 --cluster caring-squirrel-jenkins-prod
+                        yum install jq -y
+                        LATEST_TD_REVISION=$(aws ecs register-task-definition --cli-input-json file://aws/task-defination-prod.json | jq '.taskDefinition.revision')
+                        echo "Latest Task Definition Revision: $LATEST_TD_REVISION"
+                        aws ecs update-service --service LearnJenkinsApp-Service-Prod --task-definition LearnJenkinsApp-TaskDefination-Prod:$LATEST_TD_REVISION --cluster caring-squirrel-jenkins-prod
                     '''
                 }
             }
