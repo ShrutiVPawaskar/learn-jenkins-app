@@ -2,6 +2,7 @@ pipeline {
     agent any
     environment {
         REACT_APP_VERSION = "1.0.${BUILD_ID}" // Example of using Jenkins build number as version
+        AWS_DEFAULT_REGION = 'ap-south-1' // Set your AWS region
     }
     stages {
 
