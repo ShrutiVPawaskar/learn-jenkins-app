@@ -1,11 +1,28 @@
 pipeline {
     agent any
     environment {
-        NETLIFY_SITE_ID = 'b9cf0f39-7b7b-4c15-913a-8a2f4b4eda8c'
-        NETLIFY_AUTH_TOKEN = credentials('netlify-token')
         REACT_APP_VERSION = "1.0.${BUILD_ID}" // Example of using Jenkins build number as version
     }
     stages {
+
+        stage('AWS') {
+            agent {
+                docker {
+                    image 'amazon/aws-cli'
+                    reuseNode true
+                    args "--entrypoint=''"
+                }
+            }
+            steps{
+
+                withCredentials([usernamePassword(credentialsId: 'my_aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        aws --version 
+                        aws ecs register-task-definition --cli-input-json file://aws/task-defination-prod.json
+                    '''
+                }
+            }
+        }
 
         // Build stage using Node.js 18 Alpine image
         stage('Build') {
@@ -27,134 +44,6 @@ pipeline {
                 '''
             }
         }
-        stage('AWS') {
-            agent {
-                docker {
-                    image 'amazon/aws-cli'
-                    reuseNode true
-                    args "--entrypoint=''"
-                }
-            }
-            environment{
-                AWS_S3_BUCKET = 'shruti-website-bucket'
-            }
-            steps{
-                sh '''
-                    aws --version 
-                '''
-                withCredentials([usernamePassword(credentialsId: 'my_aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-                    sh '''
-                        aws s3 sync build s3://$AWS_S3_BUCKET 
-                    '''
-                }
-            }
-        }
-        stage('Run Tests') {
-            parallel {
-                stage('Test') {
-                    // Test stage using the same Node.js 18 Alpine image
-                    agent {
-                        docker {
-                            image 'node:18-alpine'
-                            reuseNode true
-                        }
-                    }
-                    steps {
-                        echo 'Test Stage'
-                        sh'''
-                            # test -f build/index.html
-                            npm test
-                        '''
-                    }
-                    post {
-                        always {
-                            junit 'jest-results/junit.xml' 
-                        }   
-                    }
-                }
-                stage('E2E') {
-                    // Test stage using the same Node.js 18 Alpine image
-                    agent {
-                        docker {
-                            image 'mcr.microsoft.com/playwright:v1.59.1-jammy'
-                            reuseNode true
-                        }
-                    }
-                    steps {
-                        echo 'E2E Stage'
-                        sh'''
-                            npm install serve
-                            node_modules/.bin/serve -s build &
-                            sleep 10
-                            npx playwright test --reporter=html
-                        '''
-                    }
-                    post {
-                        always {
-                            junit 'jest-results/junit.xml' 
-                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright Local Report', reportTitles: '', useWrapperFileDirectly: true])
-                        }   
-                    }
-                }
-            }
-        }
-        stage('Deploy Staging') {
-            // Test stage using the same Node.js 18 Alpine image
-            agent {
-                docker {
-                    image 'mcr.microsoft.com/playwright:v1.59.1-jammy'
-                    reuseNode true
-                }
-            }
-            environment {
-                CI_ENVIRONMENT_URL = 'STAGING_URL_PLACEHOLDER'
-            }  
-            steps {
-                sh '''
-                    npm install netlify-cli@20.1.1 node-jq
-                    node_modules/.bin/netlify --version
-                    echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
-                    node_modules/.bin/netlify status
-                    node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-                    CI_ENVIRONMENT_URL=$(node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json)
-                    echo "Staging URL: ${CI_ENVIRONMENT_URL}"
-                    npx playwright test --reporter=html
-                '''
-            }
-            post {
-                always {
-                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright E2E Staging Report', reportTitles: '', useWrapperFileDirectly: true])
-                }   
-            }
-        }
-        stage('Deploy Production') {
-            // Test stage using the same Node.js 18 Alpine image
-            agent {
-                docker {
-                    image 'mcr.microsoft.com/playwright:v1.59.1-jammy'
-                    reuseNode true
-                }
-            }
-            environment {
-                CI_ENVIRONMENT_URL = "https://tourmaline-naiad-809390.netlify.app"
-            }  
-            steps {
-                echo 'E2E Prod Stage'
-                sh'''
-                    npm install netlify-cli@20.1.1
-                    node_modules/.bin/netlify --version
-                    echo "Deploying to production Site ID: ${NETLIFY_SITE_ID}"
-                    node_modules/.bin/netlify status
-                    node_modules/.bin/netlify deploy --prod --dir=build --message="Automated deployment from Jenkins"
-                    sleep 15
-                    npx playwright test --reporter=html
-                '''
-            }
-            post {
-                always {
-                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright E2E Report', reportTitles: '', useWrapperFileDirectly: true])
-                }   
-            }
-        }
+
     }
 }
