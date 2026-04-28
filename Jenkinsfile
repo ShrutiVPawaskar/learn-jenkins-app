@@ -7,7 +7,7 @@ pipeline {
         AWS_ECS_CLUSTER = 'caring-squirrel-jenkins-prod' // Set your ECS cluster name
         AWS_ECS_SERVICE = 'LearnJenkinsApp-Service-Prod' // Set your ECS service name
         AWS_ECS_TD_PROD = 'LearnJenkinsApp-TaskDefination-Prod' // Set your ECS task definition name
-
+        AWS_DOCKER_REGISTRY = '671544340936.dkr.ecr.ap-south-1.amazonaws.com' // Set your ECR registry URL
     }
     stages {
         // Build stage using Node.js 18 Alpine image
@@ -39,10 +39,16 @@ pipeline {
                 }
             }
             steps {
-                sh '''
-                    echo "Building Docker image"
-                    docker build -t $APP_NAME:$REACT_APP_VERSION .
-                '''
+                withCredentials([usernamePassword(credentialsId: 'my_aws', 
+                                passwordVariable: 'AWS_SECRET_ACCESS_KEY', 
+                                usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        echo "Building Docker image"
+                        docker build -t $AWS_DOCKER_REGISTRY/$APP_NAME:$REACT_APP_VERSION .
+                        aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_DOCKER_REGISTRY
+                        docker push $AWS_DOCKER_REGISTRY/$APP_NAME:$REACT_APP_VERSION
+                    '''
+                }
             }
         }
         stage('AWS') {
