@@ -9,7 +9,34 @@ pipeline {
 
     }
     stages {
-
+        // Build stage using Node.js 18 Alpine image
+        stage('Build') {
+            agent {
+                docker {
+                    image 'node:18-alpine'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    echo "Building the application"
+                    ls -la
+                    node --version
+                    npm --version
+                    npm ci
+                    npm run build
+                    ls -la
+                '''
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    echo "Building Docker image"
+                    docker build -t myjenkinsapp .
+                '''
+            }
+        }
         stage('AWS') {
             agent {
                 docker {
@@ -34,27 +61,5 @@ pipeline {
                 }
             }
         }
-
-        // Build stage using Node.js 18 Alpine image
-        stage('Build') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh '''
-                    echo "Building the application"
-                    ls -la
-                    node --version
-                    npm --version
-                    npm ci
-                    npm run build
-                    ls -la
-                '''
-            }
-        }
-
     }
 }
