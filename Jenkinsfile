@@ -2,6 +2,7 @@ pipeline {
     agent any
     environment {
         REACT_APP_VERSION = "1.0.${BUILD_ID}" // Example of using Jenkins build number as version
+        APP_NAME = 'learn-jenkins-app' // Set your application name
         AWS_DEFAULT_REGION = 'ap-south-1' // Set your AWS region
         AWS_ECS_CLUSTER = 'caring-squirrel-jenkins-prod' // Set your ECS cluster name
         AWS_ECS_SERVICE = 'LearnJenkinsApp-Service-Prod' // Set your ECS service name
@@ -40,7 +41,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Building Docker image"
-                    docker build -t myjenkinsapp .
+                    docker build -t $APP_NAME:$REACT_APP_VERSION .
                 '''
             }
         }
@@ -49,7 +50,7 @@ pipeline {
                 docker {
                     image 'my-aws-cli'
                     reuseNode true
-                    args "-u root --entrypoint=''"
+                    args "--entrypoint=''"
                 }
             }
             steps{
