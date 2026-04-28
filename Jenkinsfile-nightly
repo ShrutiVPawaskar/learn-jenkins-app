@@ -1,0 +1,13 @@
+pipeline{
+    agent any
+    stages {
+        stage('Build Docker Images') {
+            steps {
+                echo 'Running nightly build...'
+                // Add your build steps here
+                sh 'docker build -f ci/Dockerfile-playwright -t my-playwright .'
+                sh 'docker build -f ci/Dockerfile-aws-cli -t my-aws-cli .'
+            }
+        }
+    }
+}
