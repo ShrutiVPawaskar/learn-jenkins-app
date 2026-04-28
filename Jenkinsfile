@@ -3,6 +3,10 @@ pipeline {
     environment {
         REACT_APP_VERSION = "1.0.${BUILD_ID}" // Example of using Jenkins build number as version
         AWS_DEFAULT_REGION = 'ap-south-1' // Set your AWS region
+        AWS_ECS_CLUSTER = 'caring-squirrel-jenkins-prod' // Set your ECS cluster name
+        AWS_ECS_SERVICE = 'LearnJenkinsApp-Service-Prod' // Set your ECS service name
+        AWS_ECS_TD_PROD = 'LearnJenkinsApp-TaskDefination-Prod' // Set your ECS task definition name
+
     }
     stages {
 
@@ -24,8 +28,8 @@ pipeline {
                         yum install jq -y
                         LATEST_TD_REVISION=$(aws ecs register-task-definition --cli-input-json file://aws/task-defination-prod.json | jq '.taskDefinition.revision')
                         echo "Latest Task Definition Revision: $LATEST_TD_REVISION"
-                        aws ecs update-service --service LearnJenkinsApp-Service-Prod --task-definition LearnJenkinsApp-TaskDefination-Prod:$LATEST_TD_REVISION --cluster caring-squirrel-jenkins-prod
-                        aws ecs wait services-stable --services LearnJenkinsApp-Service-Prod --cluster caring-squirrel-jenkins-prod
+                        aws ecs update-service --service $AWS_ECS_SERVICE --task-definition $AWS_ECS_TD_PROD:$LATEST_TD_REVISION --cluster $AWS_ECS_CLUSTER
+                        aws ecs wait services-stable --services $AWS_ECS_SERVICE --cluster $AWS_ECS_CLUSTER
                     '''
                 }
             }
