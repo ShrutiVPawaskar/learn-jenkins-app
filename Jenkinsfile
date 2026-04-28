@@ -65,6 +65,7 @@ pipeline {
                                 usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     sh '''
                         aws --version 
+                        sed -i "s/#APP_VERSION#/$REACT_APP_VERSION/g" aws/task-defination-prod.json
                         LATEST_TD_REVISION=$(aws ecs register-task-definition --cli-input-json file://aws/task-defination-prod.json | jq '.taskDefinition.revision')
                         echo "Latest Task Definition Revision: $LATEST_TD_REVISION"
                         aws ecs update-service --service $AWS_ECS_SERVICE --task-definition $AWS_ECS_TD_PROD:$LATEST_TD_REVISION --cluster $AWS_ECS_CLUSTER
